@@ -1,0 +1,33 @@
+{
+  "name": "ai-roundtable",
+  "version": "1.0.0",
+  "description": "ai圆桌 - AI 多角色辩论与共识生成系统",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron .",
+    "dev": "tsc && electron . --dev",
+    "clean": "rimraf dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ai",
+    "debate",
+    "consensus",
+    "electron",
+    "typescript"
+  ],
+  "author": "ai圆桌 Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "electron": "^37.3.1",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "node-fetch": "^3.3.2"
+  }
+}

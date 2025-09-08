@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ai圆桌 - AI 多角度讨论系统</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 头部 -->
+    <header class="app-header">
+      <h1>ai圆桌</h1>
+      <p>AI 多角度讨论与问题分析系统</p>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main class="main-content">
+      <!-- 顶部工具栏 -->
+      <section class="toolbar">
+        <div class="toolbar-left">
+          <h2>开始新讨论</h2>
+        </div>
+        <div class="toolbar-right">
+          <button id="showHistory" class="btn btn-secondary">
+            <span class="icon">📚</span> 历史记录
+          </button>
+          <button id="openConfig" class="btn btn-secondary">
+            <span class="icon">⚙️</span> 配置设置
+          </button>
+        </div>
+      </section>
+
+      <!-- 讨论输入区域 -->
+      <section class="debate-input" id="debateInput">
+        <div class="form-group">
+          <label for="debateTopic">讨论议题或问题：</label>
+          <textarea id="debateTopic" rows="3" placeholder="请输入讨论议题或问题，例如：'远程办公是否能提高工作效率？'或'人工智能在未来十年将如何发展？答案：人工智能将成为主流技术'"></textarea>
+        </div>
+        <button id="startDebate" class="btn btn-primary btn-large">开始讨论</button>
+      </section>
+
+      <!-- 辩论进行区域 -->
+      <section class="debate-area" id="debateArea" style="display: none;">
+        <h2 id="currentTopic"></h2>
+        
+        <!-- 角色展示 -->
+        <div class="roles-container" id="rolesContainer">
+          <h3>参与角色</h3>
+          <div class="roles-grid" id="rolesGrid"></div>
+        </div>
+
+        <!-- 辩论状态 -->
+        <div class="debate-status" id="debateStatus">
+          <span class="status-label">状态：</span>
+          <span class="status-text" id="statusText">准备中</span>
+          <span class="round-info" id="roundInfo"></span>
+        </div>
+
+        <!-- 实时讨论区域 -->
+        <div class="chat-container">
+          <h3>讨论过程</h3>
+          <div class="chat-messages" id="chatMessages">
+            <!-- 讨论消息将在这里实时显示 -->
+          </div>
+          <!-- 正在思考的角色提示 -->
+          <div class="thinking-indicator" id="thinkingIndicator" style="display: none;">
+            <div class="thinking-content">
+              <span class="thinking-avatar">🤖</span>
+              <span class="thinking-text" id="thinkingText">正在思考...</span>
+              <div class="thinking-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 共识结果 -->
+        <div class="consensus-section" id="consensusSection" style="display: none;">
+          <h3>最终共识</h3>
+          <div class="consensus-content" id="consensusContent"></div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="debate-actions">
+          <button id="stopDebate" class="btn btn-danger">停止辩论</button>
+          <button id="exportJson" class="btn btn-secondary">导出 JSON</button>
+          <button id="exportMarkdown" class="btn btn-secondary">导出 Markdown</button>
+          <button id="newDebate" class="btn btn-primary">新辩论</button>
+          <!-- 连续讨论按钮 -->
+          <button id="continueDebate" class="btn btn-accent" style="display: none;">继续深入讨论</button>
+        </div>
+      </section>
+
+      <!-- 角色预览确认区域 -->
+      <section class="role-preview-area" id="rolePreviewArea" style="display: none;">
+        <h2 id="previewTopic"></h2>
+        <p class="preview-subtitle">AI角色生成完成，请确认角色信息后开始辩论</p>
+        
+        <!-- 角色预览卡片 -->
+        <div class="roles-preview-container">
+          <h3>参与角色预览</h3>
+          <div class="roles-preview-grid" id="rolesPreviewGrid"></div>
+        </div>
+
+        <!-- 角色生成统计 -->
+        <div class="generation-stats" id="generationStats" style="display: none;">
+          <h4>生成统计</h4>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">生成时间：</span>
+              <span class="stat-value" id="generationTime">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">成功率：</span>
+              <span class="stat-value" id="successRate">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">生成模式：</span>
+              <span class="stat-value" id="generationMode">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 确认操作按钮 -->
+        <div class="preview-actions">
+          <button id="regenerateRoles" class="btn btn-secondary">
+            <span class="icon">🔄</span> 重新生成角色
+          </button>
+          <button id="confirmRoles" class="btn btn-primary btn-large">
+            <span class="icon">✓</span> 确认角色，开始辩论
+          </button>
+          <button id="backToInput" class="btn btn-outline">
+            <span class="icon">←</span> 返回修改议题
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <!-- 状态栏 -->
+    <footer class="status-bar">
+      <div class="status-item">
+        <span class="status-label">AI状态：</span>
+        <span id="aiStatus" class="status-disconnected">未连接</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">版本：</span>
+        <span>1.0.0</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- 加载遮罩 -->
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p id="loadingText">正在处理...</p>
+    </div>
+  </div>
+
+  <!-- 配置对话框 -->
+  <div class="modal-overlay" id="configModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>配置设置</h2>
+        <button class="modal-close" id="closeConfig">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- AI 模型配置 -->
+        <div class="config-section">
+          <h3>AI 模型配置</h3>
+          <div class="form-group">
+            <label for="aiType">模型类型：</label>
+            <select id="aiType">
+              <option value="ollama">Ollama (本地)</option>
+              <option value="openai">OpenAI 格式</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="baseUrl">API 地址：</label>
+            <input type="text" id="baseUrl" placeholder="http://localhost:11434" value="http://localhost:11434">
+          </div>
+          
+          <div class="form-group">
+            <label for="apiKey">API Key（可选）：</label>
+            <input type="password" id="apiKey" placeholder="输入 API Key">
+          </div>
+          
+          <div class="form-group">
+            <label for="modelName">模型名称：</label>
+            <input type="text" id="modelName" placeholder="llama2" value="llama2">
+          </div>
+          
+          <div class="form-group">
+            <label for="temperature">温度：</label>
+            <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+            <span id="temperatureValue">0.7</span>
+          </div>
+          
+          <div class="form-group">
+            <label for="maxTokens">最大 Token 数：</label>
+            <input type="number" id="maxTokens" min="100" max="4000" value="1000">
+          </div>
+          
+          <div class="form-group">
+            <label for="timeoutSeconds">超时时间（秒）：</label>
+            <input type="number" id="timeoutSeconds" min="5" max="120" value="30">
+            <small class="form-help">角色生成等复杂任务建议使用30-60秒</small>
+          </div>
+        </div>
+
+        <!-- 辩论配置 -->
+        <div class="config-section">
+          <h3>辩论设置</h3>
+          <div class="form-group">
+            <label for="maxRounds">最大轮数：</label>
+            <input type="number" id="maxRounds" min="2" max="10" value="5">
+          </div>
+          <div class="form-group">
+            <label for="roleGenerationMode">角色生成模式：</label>
+            <select id="roleGenerationMode">
+              <option value="parallel">并行生成（推荐）</option>
+              <option value="traditional">传统生成</option>
+            </select>
+            <small class="form-help">并行生成使用3个AI连接同时创建角色，质量更高但消耗更多资源</small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="testConnection" class="btn btn-secondary">测试连接</button>
+        <button id="autoFixConnection" class="btn btn-warning">🔧 自动修复连接</button>
+        <button id="saveConfig" class="btn btn-primary">保存配置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 消息提示 -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- 连续讨论对话框 -->
+  <div class="modal-overlay" id="continueDebateModal" style="display: none;">
+    <div class="modal-content continue-modal">
+      <div class="modal-header">
+        <h2>继续深入讨论</h2>
+        <button class="modal-close" id="closeContinueModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="continue-info">
+          <p>基于当前讨论的共识，我们可以继续深入探讨相关问题。</p>
+          <div class="previous-consensus">
+            <h4>上一轮共识：</h4>
+            <p id="previousConsensusText"></p>
+          </div>
+        </div>
+
+        <!-- 后续问题建议 -->
+        <div class="suggested-questions">
+          <h4>建议的深入讨论方向：</h4>
+          <div class="questions-grid" id="suggestedQuestions">
+            <!-- 动态生成问题建议 -->
+          </div>
+        </div>
+
+        <!-- 自定义问题输入 -->
+        <div class="custom-question">
+          <h4>或输入您想深入探讨的问题：</h4>
+          <textarea id="customQuestion" rows="3" placeholder="请输入您希望继续深入讨论的具体问题或方向..."></textarea>
+        </div>
+
+        <!-- 自动生成议题选项 -->
+        <div class="auto-topic-option">
+          <label>
+            <input type="checkbox" id="autoGenerateTopic" checked>
+            基于共识自动生成新的讨论议题
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelContinue" class="btn btn-secondary">取消</button>
+        <button id="confirmContinue" class="btn btn-accent">开始深入讨论</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 历史记录对话框 -->
+  <div class="modal-overlay" id="historyModal" style="display: none;">
+    <div class="modal-content history-modal">
+      <div class="modal-header">
+        <h2>历史记录</h2>
+        <button class="modal-close" id="closeHistoryModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- 历史统计 -->
+        <div class="history-stats" id="historyStats">
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-value" id="totalSessions">0</span>
+              <span class="stat-label">总会话数</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="completedSessions">0</span>
+              <span class="stat-label">已完成</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="averageDuration">0</span>
+              <span class="stat-label">平均时长</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="continuationChains">0</span>
+              <span class="stat-label">连续讨论链</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 筛选工具栏 -->
+        <div class="history-toolbar">
+          <div class="filter-group">
+            <input type="text" id="historySearch" placeholder="搜索议题或共识..." class="search-input">
+            <select id="statusFilter" class="filter-select">
+              <option value="all">所有状态</option>
+              <option value="completed">已完成</option>
+              <option value="stopped">已停止</option>
+              <option value="error">错误</option>
+            </select>
+            <select id="sortBy" class="filter-select">
+              <option value="createdAt">创建时间</option>
+              <option value="duration">讨论时长</option>
+              <option value="statementCount">发言数</option>
+              <option value="topic">议题</option>
+            </select>
+            <select id="sortOrder" class="filter-select">
+              <option value="desc">降序</option>
+              <option value="asc">升序</option>
+            </select>
+          </div>
+          <div class="history-actions">
+            <button id="refreshHistory" class="btn btn-secondary">刷新</button>
+            <button id="scanFileHistory" class="btn btn-accent">扫描文件</button>
+            <button id="exportHistory" class="btn btn-secondary">导出</button>
+            <button id="importHistory" class="btn btn-secondary">导入</button>
+            <button id="clearHistory" class="btn btn-danger">清空</button>
+          </div>
+        </div>
+
+        <!-- 历史记录列表 -->
+        <div class="history-list" id="historyList">
+          <!-- 动态生成历史记录项 -->
+        </div>
+
+        <!-- 空状态 -->
+        <div class="empty-state" id="emptyHistoryState" style="display: none;">
+          <div class="empty-icon">📚</div>
+          <h3>暂无历史记录</h3>
+          <p>开始您的第一次讨论，记录将自动保存在这里。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 角色编辑模态框 -->
+  <div class="modal-overlay" id="roleEditModal" style="display: none;">
+    <div class="modal-content role-edit-modal">
+      <div class="modal-header">
+        <h2>编辑角色</h2>
+        <button class="modal-close" id="closeRoleEditModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="editRoleName">角色名称：</label>
+          <input type="text" id="editRoleName" placeholder="输入角色名称">
+        </div>
+        <div class="form-group">
+          <label for="editRoleBackground">背景：</label>
+          <textarea id="editRoleBackground" rows="3" placeholder="输入角色背景信息"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="editRoleStance">立场：</label>
+          <input type="text" id="editRoleStance" placeholder="输入角色立场">
+        </div>
+        <div class="form-group">
+          <label for="editRolePersonality">性格：</label>
+          <input type="text" id="editRolePersonality" placeholder="输入角色性格特点">
+        </div>
+        <div class="form-group">
+          <label for="editRoleExpertise">专业领域：</label>
+          <input type="text" id="editRoleExpertise" placeholder="输入专业领域，用逗号分隔">
+          <small class="form-help">例如：人工智能, 哲学, 经济学</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelRoleEdit" class="btn btn-secondary">取消</button>
+        <button id="saveRoleEdit" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
