@@ -68,8 +68,8 @@ ai圆桌 是一个创新的AI驱动桌面应用，旨在通过智能角色生成
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/your-repo/intelliround.git
-   cd intelliround
+   git clone https://github.com/YuSekai/AiRoundChair.git
+   cd AiRoundChair
    ```
 
 2. **安装依赖**
