@@ -16,6 +16,13 @@ build/
 .env.test.local
 .env.production.local
 
+# API Keys and sensitive configurations
+*config*.js
+*config*.html
+*api-key*
+*secret*
+*.key
+
 # IDE files
 .vscode/
 .idea/
@@ -98,3 +105,4 @@ jspm_packages/
 # Electron build
 out/
 release/
+

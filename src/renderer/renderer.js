@@ -608,21 +608,37 @@ async function saveConfiguration() {
 
 // 获取当前配置
 function getCurrentConfig() {
-  return {
+  // 首先尝试从localStorage获取配置
+  const saved = localStorage.getItem('intelliround-config');
+  if (saved) {
+    try {
+      const config = JSON.parse(saved);
+      console.log('使用localStorage中的配置:', config);
+      return config;
+    } catch (error) {
+      console.warn('解析localStorage配置失败:', error);
+    }
+  }
+  
+  // 如果没有保存的配置，使用默认的DeepSeek配置
+  const defaultConfig = {
     aiModel: {
-      type: elements.aiType.value,
-      baseUrl: elements.baseUrl.value,
-      apiKey: elements.apiKey.value || undefined,
-      model: elements.modelName.value,
-      temperature: parseFloat(elements.temperature.value),
-      maxTokens: parseInt(elements.maxTokens.value),
-      timeoutSeconds: parseInt(elements.timeoutSeconds.value)
+      type: 'openai',
+      baseUrl: 'https://api.siliconflow.cn/v1/',
+      apiKey: '', // 用户需要设置自己的API密钥
+      model: 'Pro/deepseek-ai/DeepSeek-V3.1',
+      temperature: 0.7,
+      maxTokens: 2000,
+      timeoutSeconds: 60
     },
-    maxRounds: parseInt(elements.maxRounds.value),
-    roleGenerationMode: elements.roleGenerationMode.value,
+    maxRounds: 5,
+    roleGenerationMode: 'parallel',
     convergenceThreshold: 0.8,
     enableRealTimeAnalysis: true
   };
+  
+  console.log('使用默认DeepSeek配置:', defaultConfig);
+  return defaultConfig;
 }
 
 // 开始辩论 - 修改为先生成角色预览
