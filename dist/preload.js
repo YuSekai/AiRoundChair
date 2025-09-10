@@ -20,6 +20,9 @@ const electronAPI = {
     onExportDebate: (callback) => {
         electron_1.ipcRenderer.on('export-debate', (event, format) => callback(format));
     },
+    onYAMLConfigLoaded: (callback) => {
+        electron_1.ipcRenderer.on('yaml-config-loaded', (event, config) => callback(config));
+    },
     // 新增：实时辩论事件监听器
     onRoleThinking: (callback) => {
         electron_1.ipcRenderer.on('role-thinking', (event, data) => callback(data));
@@ -46,6 +49,8 @@ const electronAPI = {
     getSessionChain: (sessionId) => electron_1.ipcRenderer.invoke('get-session-chain', sessionId),
     getRelatedSessions: (topic, limit) => electron_1.ipcRenderer.invoke('get-related-sessions', topic, limit),
     scanAndImportFileHistory: () => electron_1.ipcRenderer.invoke('scan-and-import-file-history'),
+    importYAMLConfig: () => electron_1.ipcRenderer.invoke('import-yaml-config'),
+    regenerateSingleRole: (topic, roleIndex, existingRoles, config) => electron_1.ipcRenderer.invoke('regenerate-single-role', topic, roleIndex, existingRoles, config),
     onShowHistory: (callback) => {
         electron_1.ipcRenderer.on('show-history', callback);
     },

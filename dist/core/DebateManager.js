@@ -399,6 +399,88 @@ ${context}`;
     scanAndImportFileHistory() {
         return HistoryManager_1.HistoryManager.scanAndImportFileHistory();
     }
+    // 重新生成单个角色
+    async regenerateSingleRole(topic, roleIndex, existingRoles) {
+        if (!this.aiModel) {
+            throw new Error('AI 模型尚未初始化');
+        }
+        try {
+            // 获取其他角色的信息，避免重复
+            const otherRoles = existingRoles.filter((_, index) => index !== roleIndex);
+            // 构建重新生成提示
+            const regeneratePrompt = `
+基于以下讨论议题和其他已生成的角色，请重新生成一个不同的角色：
+讨论议题：${topic}
+已生成的其他角色：
+${otherRoles.map(r => `- ${r.name}: ${r.background}，立场：${r.stance}，性格：${r.personality}，专业：${r.expertise.join('、')}`).join('\n')}
+请生成一个与现有角色不同但能够形成有效讨论的新角色。
+返回JSON格式的角色数据，包含name, background, stance, personality, expertise, avatar字段。
+确保角色背景详实，立场明确，性格鲜明，专业领域具体。
+`;
+            const response = await this.aiModel.generateResponse(regeneratePrompt);
+            console.log('AI响应内容:', response.content);
+            // 尝试解析JSON响应
+            let newRole;
+            try {
+                // 尝试从响应中提取JSON
+                const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    newRole = JSON.parse(jsonMatch[0]);
+                    console.log('解析的角色数据:', newRole);
+                }
+                else {
+                    throw new Error('No JSON found in response');
+                }
+                // 确保角色包含必要字段
+                if (!newRole.name || !newRole.background || !newRole.stance || !newRole.personality || !newRole.expertise) {
+                    throw new Error('生成的角色数据不完整');
+                }
+                // 确保expertise是数组
+                if (!Array.isArray(newRole.expertise)) {
+                    newRole.expertise = [newRole.expertise];
+                }
+                // 添加avatar字段（如果不存在）
+                if (!newRole.avatar) {
+                    newRole.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(newRole.name)}&background=random`;
+                }
+                return newRole;
+            }
+            catch (parseError) {
+                console.error('解析角色数据失败:', parseError);
+                console.log('尝试手动提取信息...');
+                // 如果解析失败，尝试手动提取信息
+                const extractField = (text, fieldName) => {
+                    const patterns = [
+                        new RegExp(`"${fieldName}"\\s*:\\s*"([^"]+)"`, 'i'),
+                        new RegExp(`${fieldName}\\s*[:：]\\s*([^\\n,]+)`, 'i'),
+                        new RegExp(`${fieldName}\\s*[:：]\\s*([^\\n]+)`, 'i')
+                    ];
+                    for (const pattern of patterns) {
+                        const match = text.match(pattern);
+                        if (match) {
+                            return match[1].trim();
+                        }
+                    }
+                    return null;
+                };
+                // 手动提取角色信息
+                newRole = {
+                    name: extractField(response.content, 'name') || extractField(response.content, '角色名') || '新角色',
+                    background: extractField(response.content, 'background') || extractField(response.content, '背景') || '待补充',
+                    stance: extractField(response.content, 'stance') || extractField(response.content, '立场') || '中立',
+                    personality: extractField(response.content, 'personality') || extractField(response.content, '性格') || '理性',
+                    expertise: extractField(response.content, 'expertise') ? extractField(response.content, 'expertise').split(',').map((s) => s.trim()) : ['综合'],
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(extractField(response.content, 'name') || '新角色')}&background=random`
+                };
+                console.log('手动提取的角色数据:', newRole);
+                return newRole;
+            }
+        }
+        catch (error) {
+            console.error('重新生成角色失败:', error);
+            throw error;
+        }
+    }
 }
 exports.DebateManager = DebateManager;
 //# sourceMappingURL=DebateManager.js.map

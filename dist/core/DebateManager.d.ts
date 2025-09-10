@@ -45,5 +45,6 @@ export declare class DebateManager extends EventEmitter {
         success: number;
         failed: number;
     };
+    regenerateSingleRole(topic: string, roleIndex: number, existingRoles: any[]): Promise<any>;
 }
 //# sourceMappingURL=DebateManager.d.ts.map

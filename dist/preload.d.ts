@@ -12,6 +12,7 @@ interface ElectronAPI {
     exportDebate: (format: 'json' | 'markdown') => Promise<any>;
     onNewDebate: (callback: () => void) => void;
     onExportDebate: (callback: (format: string) => void) => void;
+    onYAMLConfigLoaded: (callback: (config: any) => void) => void;
     onRoleThinking: (callback: (data: any) => void) => void;
     onRoleStatementReady: (callback: (statement: any) => void) => void;
     onRoleError: (callback: (data: any) => void) => void;
@@ -26,6 +27,8 @@ interface ElectronAPI {
     getSessionChain: (sessionId: string) => Promise<any>;
     getRelatedSessions: (topic: string, limit?: number) => Promise<any>;
     scanAndImportFileHistory: () => Promise<any>;
+    importYAMLConfig: () => Promise<any>;
+    regenerateSingleRole: (topic: string, roleIndex: number, existingRoles: any[], config: any) => Promise<any>;
     onShowHistory: (callback: () => void) => void;
     onExportHistory: (callback: () => void) => void;
     onImportHistory: (callback: () => void) => void;

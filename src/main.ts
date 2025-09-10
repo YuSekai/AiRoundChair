@@ -1,5 +1,7 @@
 import { app, BrowserWindow, Menu, ipcMain, dialog } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
 import { DebateManager } from './core/DebateManager';
 import { FileExporter } from './utils/FileExporter';
 import { AIDiagnosticTool } from './utils/AIDiagnosticTool';
@@ -7,6 +9,49 @@ import { AIConnectionFixer } from './utils/AIConnectionFixer';
 
 let mainWindow: BrowserWindow;
 let debateManager: DebateManager;
+
+// 加载 YAML 配置并发送到渲染进程
+function loadAndSendYAMLConfig(): void {
+  try {
+    const configPath = path.join(__dirname, '..', 'config.yaml');
+    
+    if (fs.existsSync(configPath)) {
+      const fileContent = fs.readFileSync(configPath, 'utf8');
+      const yamlConfig = yaml.load(fileContent) as any;
+      
+      if (yamlConfig && yamlConfig.ai_config) {
+        // 转换为应用配置格式
+        const appConfig = {
+          aiModel: {
+            type: yamlConfig.ai_config.type || 'openai',
+            baseUrl: yamlConfig.ai_config.base_url,
+            apiKey: yamlConfig.ai_config.api_key,
+            model: yamlConfig.ai_config.model,
+            temperature: yamlConfig.ai_config.temperature || 0.7,
+            maxTokens: yamlConfig.ai_config.max_tokens || 2000,
+            timeoutSeconds: yamlConfig.ai_config.timeout_seconds || 60
+          },
+          maxRounds: yamlConfig.debate_config?.max_rounds || 5,
+          roleGenerationMode: yamlConfig.debate_config?.role_generation_mode || 'parallel',
+          convergenceThreshold: yamlConfig.debate_config?.convergence_threshold || 0.8,
+          enableRealTimeAnalysis: yamlConfig.debate_config?.enable_real_time_analysis !== false
+        };
+        
+        // 延迟发送配置，确保渲染进程已准备好接收
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('yaml-config-loaded', appConfig);
+            console.log('YAML 配置已加载并发送到渲染进程');
+          }
+        }, 1000);
+      }
+    } else {
+      console.log('未找到 config.yaml 文件，跳过配置加载');
+    }
+  } catch (error) {
+    console.error('加载 YAML 配置失败:', error);
+  }
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -20,6 +65,9 @@ function createWindow(): void {
   });
 
   mainWindow.loadFile('src/renderer/index.html');
+
+  // 加载 YAML 配置并发送到渲染进程
+  loadAndSendYAMLConfig();
 
   // 开发模式下打开开发者工具
   if (process.env.NODE_ENV === 'development') {
@@ -342,6 +390,64 @@ ipcMain.handle('scan-and-import-file-history', async () => {
   try {
     const result = debateManager.scanAndImportFileHistory();
     return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+// 重新生成单个角色
+ipcMain.handle('regenerate-single-role', async (event, topic: string, roleIndex: number, existingRoles: any[], config: any) => {
+  try {
+    // 确保AI模型已初始化
+    if (!debateManager['aiModel']) {
+      await debateManager.initializeAI(config.aiModel);
+    }
+    
+    const newRole = await debateManager.regenerateSingleRole(topic, roleIndex, existingRoles);
+    return { success: true, data: newRole };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+// 导入YAML配置文件
+ipcMain.handle('import-yaml-config', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      filters: [
+        { name: 'YAML Files', extensions: ['yaml', 'yml'] }
+      ],
+      properties: ['openFile']
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const yamlConfig = yaml.load(fileContent) as any;
+      
+      if (yamlConfig && yamlConfig.ai_config) {
+        const appConfig = {
+          aiModel: {
+            type: yamlConfig.ai_config.type || 'openai',
+            baseUrl: yamlConfig.ai_config.base_url,
+            apiKey: yamlConfig.ai_config.api_key,
+            model: yamlConfig.ai_config.model,
+            temperature: yamlConfig.ai_config.temperature || 0.7,
+            maxTokens: yamlConfig.ai_config.max_tokens || 2000,
+            timeoutSeconds: yamlConfig.ai_config.timeout_seconds || 60
+          },
+          maxRounds: yamlConfig.debate_config?.max_rounds || 5,
+          roleGenerationMode: yamlConfig.debate_config?.role_generation_mode || 'parallel',
+          convergenceThreshold: yamlConfig.debate_config?.convergence_threshold || 0.8,
+          enableRealTimeAnalysis: yamlConfig.debate_config?.enable_real_time_analysis !== false
+        };
+        
+        return { success: true, data: appConfig };
+      } else {
+        return { success: false, error: 'YAML配置格式不正确，缺少ai_config部分' };
+      }
+    }
+    return { success: false, error: '导入已取消' };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }

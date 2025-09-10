@@ -124,6 +124,19 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 监听主进程事件
   if (window.electronAPI) {
+    // 监听 YAML 配置加载事件
+    window.electronAPI.onYAMLConfigLoaded((config) => {
+      console.log('收到来自 YAML 文件的配置:', config);
+      // 将配置保存到 localStorage
+      localStorage.setItem('intelliround-config', JSON.stringify(config));
+      // 如果当前没有配置，或者配置不完整，则应用新配置
+      const currentConfig = getCurrentConfig();
+      if (!currentConfig.aiModel.apiKey) {
+        applyConfig(config);
+        showToast('配置已加载', '已从 config.yaml 文件加载配置', 'success');
+      }
+    });
+    
     window.electronAPI.onNewDebate(() => {
       resetToNewDebate();
     });
@@ -208,6 +221,12 @@ function initializeEventListeners() {
     autoFixBtn.addEventListener('click', autoFixConnection);
   }
   
+  // 添加YAML配置导入按钮事件监听器
+  const importYAMLBtn = document.getElementById('importYAMLConfig');
+  if (importYAMLBtn) {
+    importYAMLBtn.addEventListener('click', importYAMLConfiguration);
+  }
+  
   // 辩论相关
   elements.startDebate.addEventListener('click', startDebate);
   elements.stopDebate.addEventListener('click', stopDebate);
@@ -277,6 +296,30 @@ function initializeEventListeners() {
 
 // 打开配置模态框
 function openConfigModal() {
+  // 加载当前配置到表单
+  const config = getCurrentConfig();
+  console.log('加载配置到表单:', config);
+  
+  if (config && config.aiModel) {
+    document.getElementById('aiType').value = config.aiModel.type || 'openai';
+    document.getElementById('baseUrl').value = config.aiModel.baseUrl || 'https://api.siliconflow.cn/v1/';
+    document.getElementById('apiKey').value = config.aiModel.apiKey || '';
+    document.getElementById('modelName').value = config.aiModel.model || 'Pro/deepseek-ai/DeepSeek-V3.1';
+    document.getElementById('temperature').value = config.aiModel.temperature || 0.7;
+    document.getElementById('maxTokens').value = config.aiModel.maxTokens || 1000;
+    document.getElementById('timeoutSeconds').value = config.aiModel.timeoutSeconds || 30;
+    document.getElementById('maxRounds').value = config.maxRounds || 5;
+    
+    // 更新温度显示
+    document.getElementById('temperatureValue').textContent = config.aiModel.temperature || 0.7;
+    
+    // 设置角色生成模式
+    document.getElementById('roleGenerationMode').value = config.roleGenerationMode || 'parallel';
+    
+    // 更新AI类型相关字段显示
+    updateAITypeFields();
+  }
+  
   elements.configModal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
@@ -568,10 +611,14 @@ function applyAIConfig(aiConfig) {
 async function checkInitialAIStatus() {
   try {
     const config = getCurrentConfig();
-    if (config && config.aiModel) {
+    if (config && config.aiModel && config.aiModel.apiKey) {
+      console.log('检测到API密钥，开始测试连接...');
       // 静默检测AI连接状态
       const result = await window.electronAPI.testConnection(config.aiModel);
       updateAIStatus(result.success);
+    } else {
+      console.log('未设置API密钥，跳过连接测试');
+      updateAIStatus(false);
     }
   } catch (error) {
     // 静默失败，保持默认的"未连接"状态
@@ -583,7 +630,24 @@ async function checkInitialAIStatus() {
 // 保存配置
 async function saveConfiguration() {
   try {
-    const config = getCurrentConfig();
+    // 从表单字段获取配置值
+    const config = {
+      aiModel: {
+        type: document.getElementById('aiType').value,
+        baseUrl: document.getElementById('baseUrl').value,
+        apiKey: document.getElementById('apiKey').value,
+        model: document.getElementById('modelName').value,
+        temperature: parseFloat(document.getElementById('temperature').value),
+        maxTokens: parseInt(document.getElementById('maxTokens').value),
+        timeoutSeconds: parseInt(document.getElementById('timeoutSeconds').value)
+      },
+      maxRounds: parseInt(document.getElementById('maxRounds').value),
+      roleGenerationMode: document.getElementById('roleGenerationMode').value,
+      convergenceThreshold: 0.8,
+      enableRealTimeAnalysis: true
+    };
+    
+    console.log('保存配置:', config);
     localStorage.setItem('intelliround-config', JSON.stringify(config));
     currentConfig = config;
     
@@ -603,6 +667,56 @@ async function saveConfiguration() {
     closeConfigModal();
   } catch (error) {
     showToast('保存失败', error.message, 'error');
+  }
+}
+
+// 导入YAML配置文件
+async function importYAMLConfiguration() {
+  try {
+    const result = await window.electronAPI.importYAMLConfig();
+    
+    if (result.success) {
+      const config = result.data;
+      
+      // 将配置应用到表单
+      document.getElementById('aiType').value = config.aiModel.type;
+      document.getElementById('baseUrl').value = config.aiModel.baseUrl;
+      document.getElementById('apiKey').value = config.aiModel.apiKey;
+      document.getElementById('modelName').value = config.aiModel.model;
+      document.getElementById('temperature').value = config.aiModel.temperature;
+      document.getElementById('maxTokens').value = config.aiModel.maxTokens;
+      document.getElementById('timeoutSeconds').value = config.aiModel.timeoutSeconds;
+      document.getElementById('maxRounds').value = config.maxRounds;
+      document.getElementById('roleGenerationMode').value = config.roleGenerationMode;
+      
+      // 更新温度显示
+      updateTemperatureDisplay();
+      
+      // 更新AI类型字段
+      updateAITypeFields();
+      
+      // 保存配置到localStorage
+      localStorage.setItem('intelliround-config', JSON.stringify(config));
+      currentConfig = config;
+      
+      // 测试连接
+      try {
+        const connectionResult = await window.electronAPI.testConnection(config.aiModel);
+        updateAIStatus(connectionResult.success);
+      } catch (error) {
+        updateAIStatus(false);
+      }
+      
+      // 设置角色生成模式
+      const useParallel = config.roleGenerationMode === 'parallel';
+      await window.electronAPI.setRoleGenerationMode(useParallel);
+      
+      showToast('YAML配置已导入', '配置文件已成功导入并应用', 'success');
+    } else {
+      showToast('导入失败', result.error, 'error');
+    }
+  } catch (error) {
+    showToast('导入失败', error.message, 'error');
   }
 }
 
@@ -738,6 +852,38 @@ function displayRolePreviewCards(roles) {
     `;
     elements.rolesPreviewGrid.appendChild(roleCard);
   });
+}
+
+// 更新单个角色卡片
+function updateSingleRoleCard(roleIndex, role) {
+  const roleCards = elements.rolesPreviewGrid.querySelectorAll('.role-preview-card');
+  if (roleCards[roleIndex]) {
+    const card = roleCards[roleIndex];
+    card.innerHTML = `
+      <div class="role-header">
+        <div class="role-name">${role.name}</div>
+        <div class="role-actions">
+          <button class="btn btn-small btn-secondary" onclick="editRole(${roleIndex})">编辑</button>
+          <button class="btn btn-small btn-warning" onclick="regenerateSingleRole(${roleIndex})">重新生成</button>
+        </div>
+      </div>
+      <div class="role-info"><strong>背景：</strong>${role.background}</div>
+      <div class="role-info"><strong>立场：</strong>${role.stance}</div>
+      <div class="role-info"><strong>性格：</strong>${role.personality}</div>
+      <div class="role-expertise">
+        ${role.expertise.map(exp => `<span class="expertise-tag">${exp}</span>`).join('')}
+      </div>
+    `;
+    
+    // 添加更新动画效果
+    card.style.transform = 'scale(0.95)';
+    card.style.transition = 'transform 0.2s ease-in-out';
+    setTimeout(() => {
+      card.style.transform = 'scale(1)';
+    }, 100);
+  } else {
+    console.warn('找不到要更新的角色卡片:', roleIndex);
+  }
 }
 
 // 显示生成统计
@@ -1403,174 +1549,79 @@ function editRole(roleIndex) {
 }
 
 // 重新生成单个角色
+// 重新生成单个角色
 async function regenerateSingleRole(roleIndex) {
-  console.log('重新生成角色:', roleIndex);
+  console.log('=== 重新生成角色开始 ===');
+  console.log('角色索引:', roleIndex);
+  
+  // 检查currentPreviewData
+  console.log('currentPreviewData:', window.currentPreviewData);
+  console.log('topic存在:', !!window.currentPreviewData?.topic);
   
   if (!window.currentPreviewData || !window.currentPreviewData.topic) {
+    console.error('没有可用的议题数据');
     showToast('错误', '没有可用的议题数据', 'error');
     return;
   }
   
   const topic = window.currentPreviewData.topic;
-  const config = getCurrentConfig();
-  
-  console.log('当前配置:', config);
   console.log('议题:', topic);
+  
+  // 获取配置
+  const config = getCurrentConfig();
+  console.log('配置:', config);
   
   showLoading('重新生成角色...');
   
   try {
-    // 获取其他角色的信息，避免重复
-    const otherRoles = window.currentPreviewData.roles.filter((_, index) => index !== roleIndex);
+    // 调用后端的单张角色重新生成接口
+    console.log('发送单张角色重新生成请求:', { topic, roleIndex, rolesCount: window.currentPreviewData.roles.length });
     
-    // 构建重新生成提示
-    const regeneratePrompt = `
-基于以下讨论议题和其他已生成的角色，请重新生成一个不同的角色：
-
-讨论议题：${topic}
-
-已生成的其他角色：
-${otherRoles.map(r => `- ${r.name}: ${r.background}，立场：${r.stance}，性格：${r.personality}，专业：${r.expertise.join('、')}`).join('\n')}
-
-请生成一个与现有角色不同但能够形成有效讨论的新角色。
-返回JSON格式的角色数据，包含name, background, stance, personality, expertise, avatar字段。
-确保角色背景详实，立场明确，性格鲜明，专业领域具体。
-`;
-
-    // 根据AI类型调用不同的API
-    let response;
-    let apiUrl;
+    const result = await window.electronAPI.regenerateSingleRole(
+      topic, 
+      roleIndex, 
+      window.currentPreviewData.roles, 
+      config
+    );
     
-    if (config.aiModel.type === 'ollama') {
-      // Ollama API格式
-      apiUrl = config.aiModel.baseUrl + '/api/generate';
-      console.log('使用Ollama API:', apiUrl);
+    console.log('重新生成结果:', result);
+    
+    if (result.success) {
+      const newRole = result.data;
+      console.log('生成的新角色:', newRole);
       
-      response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: config.aiModel.modelName,
-          prompt: regeneratePrompt,
-          stream: false,
-          options: {
-            temperature: config.aiModel.temperature || 0.7,
-            num_predict: 1000
-          }
-        })
-      });
+      // 更新currentPreviewData中的角色
+      window.currentPreviewData.roles[roleIndex] = newRole;
+      
+      // 只更新单个角色卡片，而不是重新渲染整个网格
+      updateSingleRoleCard(roleIndex, newRole);
+      hideLoading();
+      showToast(`角色 "${newRole.name}" 重新生成成功！`, 'success');
     } else {
-      // OpenAI API格式
-      const openaiEndpoint = config.aiModel.baseUrl.endsWith('/v1/') ? 
-        config.aiModel.baseUrl + 'chat/completions' : 
-        config.aiModel.baseUrl + '/v1/chat/completions';
-      
-      apiUrl = openaiEndpoint;
-      console.log('使用OpenAI API:', apiUrl);
-      console.log('使用模型:', config.aiModel.modelName);
-      console.log('API Key:', config.aiModel.apiKey ? '已设置' : '未设置');
-      
-      const requestBody = {
-        model: config.aiModel.modelName,
-        messages: [
-          {
-            role: 'system',
-            content: '你是一个AI角色生成助手。请根据用户提供的讨论议题和现有角色信息，生成一个新的、不同的角色。返回JSON格式的角色数据，包含name, background, stance, personality, expertise, avatar字段。确保角色背景详实，立场明确，性格鲜明，专业领域具体。'
-          },
-          {
-            role: 'user',
-            content: regeneratePrompt
-          }
-        ],
-        temperature: config.aiModel.temperature || 0.7,
-        max_tokens: 1000
-      };
-      
-      console.log('请求体:', requestBody);
-      
-      response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.aiModel.apiKey}`
-        },
-        body: JSON.stringify(requestBody)
-      });
+      throw new Error(result.error);
     }
-
-    console.log('响应状态:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API响应错误:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('API响应数据:', data);
-    
-    let generatedText;
-    
-    // 根据AI类型解析响应
-    if (config.aiModel.type === 'ollama') {
-      generatedText = data.response;
-    } else {
-      // OpenAI API格式
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('OpenAI API响应格式不正确: ' + JSON.stringify(data));
-      }
-      generatedText = data.choices[0].message.content;
-    }
-    
-    console.log('生成的文本:', generatedText);
-    
-    // 尝试解析JSON
-    let newRole;
-    try {
-      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        newRole = JSON.parse(jsonMatch[0]);
-        console.log('解析的角色数据:', newRole);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.error('解析角色数据失败:', parseError);
-      console.log('尝试手动提取信息...');
-      // 如果解析失败，尝试手动提取信息
-      newRole = {
-        name: extractField(generatedText, 'name') || extractField(generatedText, '角色名') || '新角色',
-        background: extractField(generatedText, 'background') || extractField(generatedText, '背景') || '待补充',
-        stance: extractField(generatedText, 'stance') || extractField(generatedText, '立场') || '中立',
-        personality: extractField(generatedText, 'personality') || extractField(generatedText, '性格') || '理性',
-        expertise: extractField(generatedText, 'expertise') ? extractField(generatedText, 'expertise').split(',').map(s => s.trim()) : ['综合'],
-        avatar: generateAvatar(extractField(generatedText, 'name') || '新角色')
-      };
-    }
-
-    // 确保必要字段存在
-    newRole.name = newRole.name || '新角色';
-    newRole.background = newRole.background || '待补充';
-    newRole.stance = newRole.stance || '中立';
-    newRole.personality = newRole.personality || '理性';
-    newRole.expertise = newRole.expertise || ['综合'];
-    newRole.avatar = newRole.avatar || generateAvatar(newRole.name);
-
-    // 更新角色数据
-    window.currentPreviewData.roles[roleIndex] = newRole;
-
-    // 重新渲染角色预览
-    displayRolePreviewCards(window.currentPreviewData.roles);
-
-    hideLoading();
-    showToast(`角色 "${newRole.name}" 重新生成成功！`, 'success');
     
   } catch (error) {
     console.error('重新生成角色失败:', error);
     hideLoading();
-    showToast('重新生成角色失败，请检查AI连接', 'error');
+    
+    // 提供更详细的错误信息
+    let errorMessage = '重新生成角色失败';
+    if (error.message.includes('401')) {
+      errorMessage = 'API密钥无效，请检查配置';
+    } else if (error.message.includes('403')) {
+      errorMessage = 'API访问被拒绝，请检查权限';
+    } else if (error.message.includes('404')) {
+      errorMessage = 'API端点不存在，请检查配置';
+    } else if (error.message.includes('network') || error.message.includes('fetch')) {
+      errorMessage = '网络连接失败，请检查网络';
+    } else if (error.message.includes('timeout')) {
+      errorMessage = '请求超时，请稍后重试';
+    } else {
+      errorMessage = error.message;
+    }
+    
+    showToast(errorMessage, 'error');
   }
 }
 

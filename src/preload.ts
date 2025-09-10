@@ -15,6 +15,7 @@ interface ElectronAPI {
   exportDebate: (format: 'json' | 'markdown') => Promise<any>;
   onNewDebate: (callback: () => void) => void;
   onExportDebate: (callback: (format: string) => void) => void;
+  onYAMLConfigLoaded: (callback: (config: any) => void) => void;
   // 新增：实时辩论事件监听
   onRoleThinking: (callback: (data: any) => void) => void;
   onRoleStatementReady: (callback: (statement: any) => void) => void;
@@ -31,6 +32,8 @@ interface ElectronAPI {
   getSessionChain: (sessionId: string) => Promise<any>;
   getRelatedSessions: (topic: string, limit?: number) => Promise<any>;
   scanAndImportFileHistory: () => Promise<any>;
+  importYAMLConfig: () => Promise<any>;
+  regenerateSingleRole: (topic: string, roleIndex: number, existingRoles: any[], config: any) => Promise<any>;
   onShowHistory: (callback: () => void) => void;
   onExportHistory: (callback: () => void) => void;
   onImportHistory: (callback: () => void) => void;
@@ -55,6 +58,9 @@ const electronAPI: ElectronAPI = {
   },
   onExportDebate: (callback: (format: string) => void) => {
     ipcRenderer.on('export-debate', (event, format) => callback(format));
+  },
+  onYAMLConfigLoaded: (callback: (config: any) => void) => {
+    ipcRenderer.on('yaml-config-loaded', (event, config) => callback(config));
   },
   // 新增：实时辩论事件监听器
   onRoleThinking: (callback: (data: any) => void) => {
@@ -82,6 +88,8 @@ const electronAPI: ElectronAPI = {
   getSessionChain: (sessionId: string) => ipcRenderer.invoke('get-session-chain', sessionId),
   getRelatedSessions: (topic: string, limit?: number) => ipcRenderer.invoke('get-related-sessions', topic, limit),
   scanAndImportFileHistory: () => ipcRenderer.invoke('scan-and-import-file-history'),
+  importYAMLConfig: () => ipcRenderer.invoke('import-yaml-config'),
+  regenerateSingleRole: (topic: string, roleIndex: number, existingRoles: any[], config: any) => ipcRenderer.invoke('regenerate-single-role', topic, roleIndex, existingRoles, config),
   onShowHistory: (callback: () => void) => {
     ipcRenderer.on('show-history', callback);
   },
