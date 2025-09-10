@@ -260,6 +260,12 @@ ipcMain.handle('generate-followup-questions', async (event) => {
       throw new Error('No active debate session');
     }
     
+    // 检查AI模型是否已初始化
+    const status = debateManager.getStatus();
+    if (!status.aiInitialized) {
+      throw new Error('AI 模型尚未初始化，请先配置 AI 模型');
+    }
+    
     const questions = await debateManager.generateFollowUpQuestions(currentDebate);
     return { success: true, data: questions };
   } catch (error) {
@@ -273,6 +279,12 @@ ipcMain.handle('start-continuation-debate', async (event, newTopic: string, user
     const currentDebate = debateManager.getCurrentDebate();
     if (!currentDebate) {
       throw new Error('No active debate session to continue from');
+    }
+    
+    // 检查AI模型是否已初始化
+    const status = debateManager.getStatus();
+    if (!status.aiInitialized) {
+      throw new Error('AI 模型尚未初始化，请先配置 AI 模型');
     }
     
     // 生成新的议题或使用用户提供的议题
