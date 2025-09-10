@@ -8,6 +8,44 @@ export class HistoryManager {
   private static readonly MAX_HISTORY_ITEMS = 1000; // 最大历史记录数量
   private static readonly HISTORY_DIR = path.join(process.cwd(), 'history');
 
+  // 检测是否在浏览器环境中
+  private static isBrowser(): boolean {
+    return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+  }
+
+  // 安全的localStorage操作
+  private static saveToLocalStorage(key: string, data: string): void {
+    if (this.isBrowser()) {
+      try {
+        localStorage.setItem(key, data);
+      } catch (error) {
+        console.warn('localStorage保存失败:', error);
+      }
+    }
+  }
+
+  private static loadFromLocalStorage(key: string): string | null {
+    if (this.isBrowser()) {
+      try {
+        return localStorage.getItem(key);
+      } catch (error) {
+        console.warn('localStorage读取失败:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private static removeFromLocalStorage(key: string): void {
+    if (this.isBrowser()) {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn('localStorage删除失败:', error);
+      }
+    }
+  }
+
   // 保存辩论会话到历史记录
   static saveDebateSession(session: DebateSession): void {
     try {
@@ -49,7 +87,7 @@ export class HistoryManager {
       }
 
       // 保存到本地存储
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
+      this.saveToLocalStorage(this.STORAGE_KEY, JSON.stringify(history));
       
       // 更新统计信息
       this.updateStats(history);
@@ -139,7 +177,7 @@ export class HistoryManager {
         return false; // 没有找到要删除的记录
       }
       
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredHistory));
+      this.saveToLocalStorage(this.STORAGE_KEY, JSON.stringify(filteredHistory));
       this.updateStats(filteredHistory);
       return true;
     } catch (error) {
@@ -151,8 +189,8 @@ export class HistoryManager {
   // 清空所有历史记录
   static clearAllHistory(): boolean {
     try {
-      localStorage.removeItem(this.STORAGE_KEY);
-      localStorage.removeItem(this.STATS_KEY);
+      this.removeFromLocalStorage(this.STORAGE_KEY);
+      this.removeFromLocalStorage(this.STATS_KEY);
       return true;
     } catch (error) {
       console.error('清空历史记录失败:', error);
@@ -163,7 +201,7 @@ export class HistoryManager {
   // 获取历史记录统计
   static getStats(): HistoryStats {
     try {
-      const statsJson = localStorage.getItem(this.STATS_KEY);
+      const statsJson = this.loadFromLocalStorage(this.STATS_KEY);
       if (statsJson) {
         return JSON.parse(statsJson);
       }
@@ -218,7 +256,7 @@ export class HistoryManager {
   private static updateStats(history: DebateHistory[]): void {
     try {
       const stats = this.calculateStats(history);
-      localStorage.setItem(this.STATS_KEY, JSON.stringify(stats));
+      this.saveToLocalStorage(this.STATS_KEY, JSON.stringify(stats));
     } catch (error) {
       console.error('更新统计信息失败:', error);
     }
@@ -278,7 +316,7 @@ export class HistoryManager {
         mergedHistory.splice(this.MAX_HISTORY_ITEMS);
       }
       
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(mergedHistory));
+      this.saveToLocalStorage(this.STORAGE_KEY, JSON.stringify(mergedHistory));
       this.updateStats(mergedHistory);
       
       console.log(`成功导入 ${newRecords.length} 条历史记录`);
@@ -409,7 +447,7 @@ export class HistoryManager {
     try {
       // 获取本地存储的历史记录
       const localHistory: DebateHistory[] = [];
-      const historyJson = localStorage.getItem(this.STORAGE_KEY);
+      const historyJson = this.loadFromLocalStorage(this.STORAGE_KEY);
       if (historyJson) {
         localHistory.push(...JSON.parse(historyJson));
       }
@@ -468,7 +506,7 @@ export class HistoryManager {
 
       if (imported > 0) {
         // 保存更新后的历史记录
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(localHistory));
+        this.saveToLocalStorage(this.STORAGE_KEY, JSON.stringify(localHistory));
         this.updateStats(localHistory);
         console.log(`成功导入 ${imported} 条历史记录`);
       }
