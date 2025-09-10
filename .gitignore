@@ -19,6 +19,8 @@ build/
 # API Keys and sensitive configurations
 *config*.js
 *config*.html
+*config*.yaml
+*config*.yml
 *api-key*
 *secret*
 *.key

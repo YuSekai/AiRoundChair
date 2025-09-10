@@ -1,0 +1,40 @@
+# AI圆桌配置文件
+# 请在此文件中配置你的AI服务信息
+# ⚠️ 安全提醒：不要将包含真实API密钥的文件提交到代码仓库
+
+ai_config:
+  # AI服务类型
+  type: "openai"
+
+  # API地址
+  base_url: "https://api.siliconflow.cn/v1/"
+
+  # API密钥 (请替换为你的真实API密钥)
+  api_key: "sk-your-real-api-key-here"
+
+  # 模型名称
+  model: "Pro/deepseek-ai/DeepSeek-V3.1"
+
+  # 生成参数
+  temperature: 0.7
+  max_tokens: 2000
+  timeout_seconds: 60
+
+# 讨论设置
+debate_config:
+  # 最大讨论轮数
+  max_rounds: 5
+
+  # 角色生成模式：parallel（并行）或 traditional（传统）
+  role_generation_mode: "parallel"
+
+  # 收敛阈值
+  convergence_threshold: 0.8
+
+  # 是否启用实时分析
+  enable_real_time_analysis: true
+# 使用说明：
+# 1. 将 YOUR_API_KEY_HERE 替换为你的真实API密钥
+# 2. 根据需要调整其他参数
+# 3. 保存此文件到安全位置
+# 4. 在应用中导入此配置
