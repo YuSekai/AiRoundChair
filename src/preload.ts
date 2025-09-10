@@ -34,6 +34,8 @@ interface ElectronAPI {
   scanAndImportFileHistory: () => Promise<any>;
   importYAMLConfig: () => Promise<any>;
   regenerateSingleRole: (topic: string, roleIndex: number, existingRoles: any[], config: any) => Promise<any>;
+  startContinuationDebate: (newTopic: string, userQuestion?: string) => Promise<any>;
+  generateFollowupQuestions: () => Promise<any>;
   onShowHistory: (callback: () => void) => void;
   onExportHistory: (callback: () => void) => void;
   onImportHistory: (callback: () => void) => void;
@@ -90,6 +92,8 @@ const electronAPI: ElectronAPI = {
   scanAndImportFileHistory: () => ipcRenderer.invoke('scan-and-import-file-history'),
   importYAMLConfig: () => ipcRenderer.invoke('import-yaml-config'),
   regenerateSingleRole: (topic: string, roleIndex: number, existingRoles: any[], config: any) => ipcRenderer.invoke('regenerate-single-role', topic, roleIndex, existingRoles, config),
+  startContinuationDebate: (newTopic: string, userQuestion?: string) => ipcRenderer.invoke('start-continuation-debate', newTopic, userQuestion),
+  generateFollowupQuestions: () => ipcRenderer.invoke('generate-followup-questions'),
   onShowHistory: (callback: () => void) => {
     ipcRenderer.on('show-history', callback);
   },
